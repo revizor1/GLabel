@@ -6,7 +6,8 @@
         {
             "label": "GCE Update",
             "type": "shell",
-            "command": "gcloud app deploy -q & gcloud app browse"
+            "command": "gcloud app deploy -q & gcloud app browse",
+            "problemMatcher": []
         }
     ]
 }
