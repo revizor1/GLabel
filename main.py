@@ -139,19 +139,26 @@ def extract(input_file):
                             im.save(fn, quality=100)
                             im = add_margin(im, 0, 0, 50, 0, labels[fn])
                         im.save(fn, quality=100)
-            # else:
-                # print("No image found for page %d" % (i + 1))
-
+                        logging.info(f"Extracted {fn}")
+            else:
+                logging.debug("No images found on page %d" % (i + 1))
+            logging.info(f"Page {i} processed")
     return labels
 
 def glue(labels):
-    # rect = fitz.Rect(0, 0, 280, 410)
+    logging.info(f"Processing images: {labels}")
     images = [Image.open(label).convert('RGB') for label in labels]
-    r = "%stmp%s%s.pdf" % (os.sep, os.sep, str(tempfile.TemporaryFile().name).split(os.sep)[-1])
+    for v in labels.values():
+        if v:
+            bn = v.split()[0]
+            break
+    else:
+        bn = str(tempfile.TemporaryFile().name).split(os.sep)[-1]
+    r = "%stmp%s%s.pdf" % (os.sep, os.sep, bn)
+    logging.info(f"Saving {r}")
     images[0].save(r, save_all=True, append_images=images[1:])
     for label in labels:
         os.remove(label)
-        
     return r
 
 # # fitz
@@ -213,7 +220,7 @@ def upload():
             
             
             
-            zzz
+            # zzz
 
 
 
