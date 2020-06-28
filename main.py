@@ -135,10 +135,11 @@ def extract(input_file):
                             width, height = height, width
                         if im.mode != "L":
                             im = im.convert("L")  # TODO: tweak dither parameter
-                        im = im.resize((int(280 / 72 * 300), int(410 / 72 * 300)))
-                        if width != 762 or height != 1200:  # Already labeled # TODO: Test
+                        im = im.resize((int(280 / 72 * 300), int(410 / 72 * 300)), Image.ANTIALIAS)
+                        # im = im.resize((int(4 * 96), int(6 * 96)), Image.ANTIALIAS)
+                        if width != 762 or height != 1200:  # Already labeled
                             im = add_margin(im, 0, 0, 50, 0, labels[fn])
-                        im.save(fn, quality=100)
+                        im.save(fn, quality=100, subsampling=0, dpi=(300, 300))
             else:
                 logging.warning(f"No images on page {i+1}")
 
@@ -147,7 +148,6 @@ def extract(input_file):
 
 def glue(labels):
     logging.debug(f"Processing: {list(labels.keys())}")
-    # images = [Image.open(label).convert("RGB") for label in labels]
     # images = [Image.open(label).convert("L") for label in labels]
     images = [Image.open(label) for label in labels]
 
@@ -160,12 +160,15 @@ def glue(labels):
     r = "%stmp%s%s.pdf" % (os.sep, os.sep, bn)
     logging.info(f"Saving {r}")
     try:
-        images[0].save(r, save_all=True, append_images=images[1:])
+        images[0].save(r, save_all=True, append_images=images[1:], quality=100, subsampling=0, resolution=300)
     except:
         logging.error(traceback.print_exc())
     for label in labels:
         logging.debug("Removing %s" % (label))
-        os.remove(label)  # TODO: Error handle
+        try:
+            os.remove(label)
+        except:
+            logging.warn(f"Cannot remove {label}")
     logging.info(f"Saved {r}")
     return r
 
@@ -193,7 +196,7 @@ def convert2(input_file):
             if width > height:  # Landscape, have to rotate -90
                 width, height = height, width
                 img = img.rotate(270, expand=True)
-                img.save(file)
+                img.save(file, quality=100, subsampling=0)
             if height == 2200:  # USPS Summary Page
                 continue
             if height < 1801 and width < 1201:
