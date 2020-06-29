@@ -18,6 +18,7 @@ except ImportError:
 
 # [END imports]
 app = Flask(__name__)
+resolution = 200  # 300 is slow to print
 
 
 def add_margin(pil_img, top, right, bottom, left, text):
@@ -26,7 +27,8 @@ def add_margin(pil_img, top, right, bottom, left, text):
     result = Image.new(pil_img.mode, (new_width, new_height), color="white")
     result.paste(pil_img, (left, top))
     draw = ImageDraw.Draw(result)
-    draw.text((12, result.size[1] - 46), text, font=ImageFont.truetype("courbd.ttf", 46, encoding="unic"))
+    fontsize = 46 if resolution == 300 else 30
+    draw.text((12, result.size[1] - 46), text, font=ImageFont.truetype("courbd.ttf", fontsize, encoding="unic"))
     return result
 
 
@@ -135,11 +137,10 @@ def extract(input_file):
                             width, height = height, width
                         if im.mode != "L":
                             im = im.convert("L")  # TODO: tweak dither parameter
-                        im = im.resize((int(280 / 72 * 300), int(410 / 72 * 300)), Image.ANTIALIAS)
-                        # im = im.resize((int(4 * 96), int(6 * 96)), Image.ANTIALIAS)
+                        im = im.resize((int(280 / 72 * resolution), int(410 / 72 * resolution)), Image.ANTIALIAS)
                         if width != 762 or height != 1200:  # Already labeled
                             im = add_margin(im, 0, 0, 50, 0, labels[fn])
-                        im.save(fn, quality=100, subsampling=0, dpi=(300, 300))
+                        im.save(fn, quality=100, subsampling=0, dpi=(resolution, resolution))
             else:
                 logging.warning(f"No images on page {i+1}")
 
@@ -160,7 +161,15 @@ def glue(labels):
     r = "%stmp%s%s.pdf" % (os.sep, os.sep, bn)
     logging.info(f"Saving {r}")
     try:
-        images[0].save(r, save_all=True, append_images=images[1:], quality=100, subsampling=0, resolution=300)
+        images[0].save(
+            r,
+            save_all=True,
+            append_images=images[1:],
+            quality=100,
+            subsampling=0,
+            resolution=resolution,
+            dpi=(resolution, resolution),
+        )
     except:
         logging.error(traceback.print_exc())
     for label in labels:
@@ -228,15 +237,13 @@ def upload():
     if request.method == "POST":
         fn = "%stmp%s%s.pdf" % (os.sep, os.sep, str(tempfile.TemporaryFile().name).split(os.sep)[-1],)
         request.files["file"].save(fn)
-        try:  # PyMuPDF
-
-            zz
-
-            r = convert2(fn)
-        except:
+        try:
             r = glue(extract(fn))
+        except:
+            logging.warn(f"Plan A failed. Switching to Plan B.")
+            r = convert2(fn)  # PyMuPDF - good luck loading it on Linux
 
-    logging.warning(f"Opening {r}")
+    logging.info(f"Opening {r}")
     with open(r, "rb"):
         filename = os.path.basename(r)
         pathname = r[: len(r) - len(filename)]
@@ -283,10 +290,9 @@ def favicon():
     )
 
 
-@app.errorhandler(502)
+@app.errorhandler(500)
 def server_error(e):
     # Log the error and stacktrace.
-    logging.warning(f"An error occurred during a request. {e}")
     logging.exception(f"An error occurred during a request. {e}")
     return "An internal error occurred", 500
 
