@@ -27,7 +27,8 @@ def add_margin(pil_img, top, right, bottom, left, text):
     result = Image.new(pil_img.mode, (new_width, new_height), color="white")
     result.paste(pil_img, (left, top))
     draw = ImageDraw.Draw(result)
-    fontsize = 46 if resolution == 300 else 30
+    # fontsize = 46 if resolution == 300 else 30
+    fontsize = int(0.15 * resolution)
     draw.text((12, result.size[1] - 46), text, font=ImageFont.truetype("courbd.ttf", fontsize, encoding="unic"))
     return result
 
