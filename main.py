@@ -4,8 +4,6 @@ import logging
 import tempfile
 import os
 import struct
-
-# import sys
 import traceback
 import zlib
 import PyPDF4
@@ -129,28 +127,30 @@ def extract(input_file):
                             labels[fn] = batch
                         except:
                             logging.error(traceback.print_exc())
-                        im = Image.open(fn)
-                        logging.warning(
-                            f"{fn} \t{im.format}\tmode {im.mode}  \t{o['/Width']}x{o['/Height']}\t{labels.get(fn)}"
-                        )
-                        if height < width:
-                            im = im.rotate(-90, expand=True)
-                            width, height = height, width
-                        if im.mode != "L":
-                            im = im.convert("L")  # TODO: tweak dither parameter
-                        im = im.resize((int(280 / 72 * resolution), int(410 / 72 * resolution)), Image.ANTIALIAS)
-                        if width != 762 or height != 1200:  # Already labeled
-                            im = add_margin(im, 0, 0, 50, 0, labels[fn])
-                        im.save(fn, quality=100, subsampling=0, dpi=(resolution, resolution))
+                        prep_image(fn, labels[fn], height, width)
             else:
                 logging.warning(f"No images on page {i+1}")
 
     return labels
 
 
+def prep_image(fn, label, height, width):
+    im = Image.open(fn)
+    # logging.warning(f"{fn} \t{im.format}\tmode {im.mode}  \t{o['/Width']}x{o['/Height']}\t{label}")
+    logging.warning(f"{fn} \t{im.format}\tmode {im.mode}  \t{label}")
+    if height < width:
+        im = im.rotate(-90, expand=True)
+        width, height = height, width
+    if im.mode != "L":
+        im = im.convert("L")  # TODO: tweak dither parameter
+    im = im.resize((int(280 / 72 * resolution), int(410 / 72 * resolution)), Image.ANTIALIAS)
+    if width != 762 or height != 1200:  # Already labeled
+        im = add_margin(im, 0, 0, 50, 0, label)
+    im.save(fn, quality=100, subsampling=0, dpi=(resolution, resolution))
+
+
 def glue(labels):
     logging.debug(f"Processing: {list(labels.keys())}")
-    # images = [Image.open(label).convert("L") for label in labels]
     images = [Image.open(label) for label in labels]
 
     for v in labels.values():
@@ -236,13 +236,23 @@ def convert2(input_file):
 @app.route("/labels", methods=["GET", "POST"])
 def upload():
     if request.method == "POST":
-        fn = "%stmp%s%s.pdf" % (os.sep, os.sep, str(tempfile.TemporaryFile().name).split(os.sep)[-1],)
-        request.files["file"].save(fn)
-        try:
-            r = glue(extract(fn))
-        except:
-            logging.warn(f"Plan A failed. Switching to Plan B.")
-            r = convert2(fn)  # PyMuPDF - good luck loading it on Linux
+        if not request.files["file"]:  # No file provided
+            return render_template("upload.html")
+        else:
+            ext = request.files["file"].filename.split(".")[-1].lower()
+            logging.warning(f"Uploading {ext}")
+            fn = "%stmp%s%s.%s" % (os.sep, os.sep, str(tempfile.TemporaryFile().name).split(os.sep)[-1], ext)
+            request.files["file"].save(fn)
+            if ext == "pdf":
+                try:
+                    r = glue(extract(fn))
+                except:
+                    logging.warn(f"Plan A failed. Switching to Plan B.")
+                    r = convert2(fn)  # PyMuPDF - good luck loading it on Linux
+            elif ext in ["jpg", "jpeg", "png"]:
+                labels = {fn: ""}
+                prep_image(fn, labels[fn], 1200, 800)
+                r = glue(labels)
 
     logging.info(f"Opening {r}")
     with open(r, "rb"):
