@@ -25,7 +25,6 @@ def add_margin(pil_img, top, right, bottom, left, text):
     result = Image.new(pil_img.mode, (new_width, new_height), color="white")
     result.paste(pil_img, (left, top))
     draw = ImageDraw.Draw(result)
-    # fontsize = 46 if resolution == 300 else 30
     fontsize = int(0.15 * resolution)
     draw.text((12, result.size[1] - 46), text, font=ImageFont.truetype("courbd.ttf", fontsize, encoding="unic"))
     return result
@@ -174,7 +173,7 @@ def glue(labels):
     except:
         logging.error(traceback.print_exc())
     for label in labels:
-        logging.debug("Removing %s" % (label))
+        logging.debug(f"Removing {label}")
         try:
             os.remove(label)
         except:
@@ -247,7 +246,7 @@ def upload():
                 try:
                     r = glue(extract(fn))
                 except:
-                    logging.warn(f"Plan A failed. Switching to Plan B.")
+                    logging.warning(f"Plan A failed. Switching to Plan B.")
                     r = convert2(fn)  # PyMuPDF - good luck loading it on Linux
             elif ext in ["jpg", "jpeg", "png"]:
                 labels = {fn: ""}
