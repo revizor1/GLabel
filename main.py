@@ -137,12 +137,12 @@ def prep_image(fn, label, height, width):
     im = Image.open(fn)
     # logging.warning(f"{fn} \t{im.format}\tmode {im.mode}  \t{o['/Width']}x{o['/Height']}\t{label}")
     logging.warning(f"{fn} \t{im.format}\tmode {im.mode}  \t{label}")
-    if height < width:
+    if (height < width) != (im.height < im.width):
         im = im.rotate(-90, expand=True)
         width, height = height, width
     if im.mode != "L":
         im = im.convert("L")  # TODO: tweak dither parameter
-    im = im.resize((int(280 / 72 * resolution), int(410 / 72 * resolution)), Image.ANTIALIAS)
+    im = im.resize((int(280 / 72 * resolution), int(400 / 72 * resolution)), Image.ANTIALIAS)
     if width != 762 or height != 1200:  # Already labeled
         im = add_margin(im, 0, 0, 50, 0, label)
     im.save(fn, quality=100, subsampling=0, dpi=(resolution, resolution))
