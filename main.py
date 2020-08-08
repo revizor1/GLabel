@@ -80,6 +80,8 @@ def extract(input_file):
                     o = xObject[obj]
                     if o["/Subtype"] == "/Image":
                         width, height = o["/Width"], o["/Height"]
+                        if width > height:
+                            width, height = height, width
                         if height == 2200:  # USPS Summary Page
                             continue
                         batch = meta.pop(0) if bool(meta) else ""
@@ -138,6 +140,7 @@ def prep_image(fn, label, height, width):
     # logging.warning(f"{fn} \t{im.format}\tmode {im.mode}  \t{o['/Width']}x{o['/Height']}\t{label}")
     logging.warning(f"{fn} \t{im.format}\tmode {im.mode}  \t{label}")
     if (height < width) != (im.height < im.width):
+        # if height < width:  # != (im.height < im.width):
         im = im.rotate(-90, expand=True)
         width, height = height, width
     if im.mode != "L":
